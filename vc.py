@@ -59,16 +59,18 @@ def http_get(url):
 
 
 def send_spade(events):
-    raw = json.dumps({"events": events}).encode()
-    payload = b64encode(gzip.compress(raw)).decode()
-    body = "data=" + urllib.parse.quote(payload)
-    req = urllib.request.Request(
-        "https://gql.twitch.tv/gql",
-        data=body.encode(),
-        headers={"Client-Id": CLIENT_ID, "User-Agent": UA, "Content-Type": "text/plain"},
-        method="POST",
+    payload = b64encode(gzip.compress(json.dumps(events).encode())).decode()
+    r = gql(
+        {
+            "operationName": "SendEvents",
+            "query": "mutation SendEvents($input: SendSpadeEventsInput!) {\n  sendSpadeEvents(input: $input) {\n    statusCode\n  }\n}",
+            "variables": {"input": {"data": payload}},
+        }
     )
-    return urllib.request.urlopen(req, timeout=15).read().decode()
+    try:
+        return r["data"]["sendSpadeEvents"]["statusCode"]
+    except Exception:
+        return json.dumps(r)[:200]
 
 
 import urllib.parse
